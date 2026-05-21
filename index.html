@@ -136,7 +136,7 @@ self.addEventListener('fetch', e => {
   header {
     background: linear-gradient(135deg, #0d1526 0%, #1a2a4a 50%, #0d1526 100%);
     border-bottom: 3px solid var(--accent);
-    padding: calc(20px + var(--sat)) 24px 16px;
+    padding: calc(28px + var(--sat)) 24px 16px;
     position: sticky;
     top: 0;
     z-index: 100;
@@ -683,7 +683,7 @@ self.addEventListener('fetch', e => {
     Acesse offline, direto da tela inicial
   </div>
   <button id="btn-install">Instalar</button>
-  <button id="btn-install-close" title="Fechar">✕</button>
+  <button onclick="document.getElementById('install-banner').style.display='none';sessionStorage.setItem('banner-dismissed','1');" style="background:none;border:none;color:#7a8aaa;font-size:1.3rem;cursor:pointer;padding:4px 6px;line-height:1" title="Fechar">✕</button>
 </div>
 
 <header>
@@ -1195,44 +1195,35 @@ ${ownedRows ? `<table><thead><tr><th>País</th><th>Qtd</th><th>Coletadas</th></t
 let deferredPrompt = null;
 const installBanner = document.getElementById('install-banner');
 const btnInstall = document.getElementById('btn-install');
-const btnInstallClose = document.getElementById('btn-install-close');
 
-// Nunca mostrar o banner se já está rodando como app instalado (standalone)
+// Esconder banner se já está rodando como app instalado
 const isStandalone = window.matchMedia('(display-mode: standalone)').matches
   || window.navigator.standalone === true;
 
-if (!isStandalone) {
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    installBanner.classList.add('visible');
-  });
+if (isStandalone || sessionStorage.getItem('banner-dismissed')) {
+  installBanner.style.display = 'none';
 }
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  if (!isStandalone && !sessionStorage.getItem('banner-dismissed')) {
+    installBanner.style.display = 'flex';
+  }
+});
 
 btnInstall.addEventListener('click', async () => {
   if (!deferredPrompt) return;
   deferredPrompt.prompt();
   const { outcome } = await deferredPrompt.userChoice;
   deferredPrompt = null;
-  installBanner.classList.remove('visible');
-});
-
-btnInstallClose.addEventListener('click', (e) => {
-  e.stopPropagation();
-  installBanner.classList.remove('visible');
-  // Guardar preferência para não mostrar de novo nessa sessão
-  sessionStorage.setItem('banner-dismissed', '1');
+  installBanner.style.display = 'none';
 });
 
 window.addEventListener('appinstalled', () => {
-  installBanner.classList.remove('visible');
+  installBanner.style.display = 'none';
   deferredPrompt = null;
 });
-
-// Se o usuário já fechou o banner nessa sessão, não mostrar novamente
-if (sessionStorage.getItem('banner-dismissed')) {
-  installBanner.classList.remove('visible');
-}
 
 // ─── INIT ─────────────────────────────────────────────────────────────────
 buildGroups();
