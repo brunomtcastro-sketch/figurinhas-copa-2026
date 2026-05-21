@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Figurinhas Copa 2026</title>
+
+<!-- PWA -->
+<meta name="application-name" content="Figurinhas 2026">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Figurinhas">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0a0e1a">
+<meta name="description" content="Controle de figurinhas da Copa 2026 – Ludopédio">
+
+<!-- Inline manifest via JS (evita necessidade de arquivo externo) -->
+<script>
+(function() {
+  const manifest = {
+    name: "Figurinhas Copa 2026",
+    short_name: "Figurinhas",
+    description: "Controle de figurinhas da Copa 2026",
+    start_url: ".",
+    display: "standalone",
+    background_color: "#0a0e1a",
+    theme_color: "#0a0e1a",
+    orientation: "portrait-primary",
+    icons: [
+      { src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='32' fill='%230a0e1a'/%3E%3Ctext x='96' y='130' font-size='110' text-anchor='middle'%3E%E2%9A%BD%3C/text%3E%3C/svg%3E", sizes: "192x192", type: "image/svg+xml" },
+      { src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='80' fill='%230a0e1a'/%3E%3Ctext x='256' y='360' font-size='300' text-anchor='middle'%3E%E2%9A%BD%3C/text%3E%3C/svg%3E", sizes: "512x512", type: "image/svg+xml" }
+    ]
+  };
+  const blob = new Blob([JSON.stringify(manifest)], {type: 'application/manifest+json'});
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('link');
+  link.rel = 'manifest';
+  link.href = url;
+  document.currentScript.parentNode.appendChild(link);
+})();
+</script>
+
+<!-- Service Worker (cache offline) -->
+<script>
+if ('serviceWorker' in navigator) {
+  const swCode = `
+const CACHE = 'copa2026-v1';
+const FONTS = [
+  'https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@400;500&display=swap'
+];
+self.addEventListener('install', e => {
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(FONTS).catch(()=>{})));
+  self.skipWaiting();
+});
+self.addEventListener('activate', e => { self.clients.claim(); });
+self.addEventListener('fetch', e => {
+  e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).catch(() => new Response(''))));
+});
+  `;
+  const blob = new Blob([swCode], {type: 'application/javascript'});
+  const url = URL.createObjectURL(blob);
+  navigator.serviceWorker.register(url).catch(() => {});
+}
+</script>
+
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --card: #1a2235;
+    --border: #2a3550;
+    --accent: #f5c518;
+    --accent2: #e05c1a;
+    --green: #22c55e;
+    --text: #e8eaf2;
+    --muted: #7a8aaa;
+    --radius: 10px;
+  }
+
+  --sat: env(safe-area-inset-top, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+    --sal: env(safe-area-inset-left, 0px);
+    --sar: env(safe-area-inset-right, 0px);
+  }
+
+  /* ── INSTALL BANNER ── */
+  #install-banner {
+    display: none;
+    background: linear-gradient(135deg, #1a2a4a, #0d1526);
+    border-bottom: 2px solid var(--accent);
+    padding: 10px 16px;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 200;
+  }
+  #install-banner.visible { display: flex; }
+  #install-banner .ib-text { flex: 1; font-family: 'Barlow Condensed', sans-serif; font-size: 0.85rem; color: var(--text); }
+  #install-banner .ib-text strong { color: var(--accent); display: block; font-size: 0.95rem; letter-spacing: 0.5px; }
+  #btn-install {
+    padding: 7px 16px;
+    border-radius: 8px;
+    border: none;
+    background: var(--accent);
+    color: #000;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  #btn-install-close {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 4px;
+    line-height: 1;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Barlow', sans-serif;
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: linear-gradient(135deg, #0d1526 0%, #1a2a4a 50%, #0d1526 100%);
+    border-bottom: 3px solid var(--accent);
+    padding: calc(20px + var(--sat)) 24px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 4px 30px rgba(0,0,0,0.6);
+  }
+  .header-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .title-block h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.4rem;
+    letter-spacing: 3px;
+    color: var(--accent);
+    line-height: 1;
+  }
+  .title-block p {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.85rem;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  /* ── STATS BAR ── */
+  .stats-bar {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-left: auto;
+    align-items: center;
+  }
+  .stat-pill {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    text-align: center;
+    min-width: 90px;
+  }
+  .stat-pill .val {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.6rem;
+    line-height: 1;
+    color: var(--accent);
+  }
+  .stat-pill .lbl {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .stat-pill.green .val { color: var(--green); }
+  .stat-pill.red .val { color: #f87171; }
+  .stat-pill.orange .val { color: var(--accent2); }
+
+  /* ── PACOTES CONTROL ── */
+  .pacotes-block {
+    background: rgba(245,197,24,0.08);
+    border: 1px solid rgba(245,197,24,0.3);
+    border-radius: 8px;
+    padding: 8px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .pacotes-block .lbl {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--accent);
+  }
+  .pacotes-block .count {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.8rem;
+    color: var(--accent);
+    line-height: 1;
+    min-width: 36px;
+    text-align: center;
+  }
+  .btn-sm {
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    border: none;
+    background: var(--accent);
+    color: #000;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .btn-sm:hover { background: #ffd740; transform: scale(1.1); }
+  .btn-sm.minus { background: #374151; color: var(--text); }
+  .btn-sm.minus:hover { background: #4b5563; }
+
+  /* ── PROB BAR ── */
+  .prob-block {
+    background: rgba(30,40,70,0.8);
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--accent2);
+    padding: 12px 24px;
+    text-align: center;
+  }
+  .prob-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .prob-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.8rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .prob-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    color: var(--accent2);
+    line-height: 1;
+  }
+  .prob-bar-wrap {
+    flex: 1;
+    min-width: 200px;
+    height: 10px;
+    background: var(--border);
+    border-radius: 5px;
+    overflow: hidden;
+  }
+  .prob-bar-fill {
+    height: 100%;
+    border-radius: 5px;
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+    transition: width 0.5s ease;
+  }
+  .prob-text {
+    font-size: 0.75rem;
+    color: var(--muted);
+    max-width: 500px;
+    line-height: 1.4;
+  }
+
+  /* ── PROGRESS ── */
+  .progress-section {
+    max-width: 1400px;
+    margin: 20px auto 0;
+    padding: 0 20px;
+  }
+  .global-progress {
+    background: var(--border);
+    border-radius: 6px;
+    height: 8px;
+    overflow: hidden;
+    margin-top: 6px;
+  }
+  .global-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--green), #4ade80);
+    border-radius: 6px;
+    transition: width 0.4s ease;
+  }
+  .progress-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+
+  /* ── SEARCH + FILTERS ── */
+  .toolbar {
+    max-width: 1400px;
+    margin: 16px auto 8px;
+    padding: 0 20px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .search-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    color: var(--text);
+    font-family: 'Barlow', sans-serif;
+    font-size: 0.9rem;
+    width: 220px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .search-box:focus { border-color: var(--accent); }
+  .filter-btn {
+    padding: 7px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--muted);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .filter-btn.active, .filter-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(245,197,24,0.08);
+  }
+  .toolbar-right {
+    margin-left: auto;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .btn-clear {
+    padding: 7px 14px;
+    border-radius: 8px;
+    border: 1px solid #ef4444;
+    background: rgba(239,68,68,0.08);
+    color: #ef4444;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-clear:hover { background: rgba(239,68,68,0.2); }
+
+  /* ── GROUPS ── */
+  .groups-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 10px 20px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .country-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .country-card.complete {
+    border-color: rgba(34,197,94,0.4);
+  }
+  .country-card:hover {
+    border-color: rgba(245,197,24,0.3);
+  }
+
+  .country-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    background: rgba(255,255,255,0.02);
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+  }
+  .country-flag {
+    font-size: 1.4rem;
+    min-width: 28px;
+  }
+  .country-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: 0.5px;
+    color: var(--text);
+  }
+  .country-code {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.75rem;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+  .country-mini-progress {
+    flex: 1;
+    height: 5px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+    max-width: 120px;
+  }
+  .country-mini-fill {
+    height: 100%;
+    background: var(--green);
+    border-radius: 3px;
+    transition: width 0.3s;
+  }
+  .country-count {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1rem;
+    color: var(--muted);
+    min-width: 50px;
+    text-align: right;
+  }
+  .country-count span { color: var(--green); }
+  .complete-badge {
+    font-size: 0.7rem;
+    background: rgba(34,197,94,0.15);
+    border: 1px solid rgba(34,197,94,0.4);
+    color: var(--green);
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-family: 'Barlow Condensed', sans-serif;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .stickers-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 12px 16px;
+  }
+
+  .sticker {
+    width: 54px;
+    height: 54px;
+    border-radius: 7px;
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+    text-align: center;
+    line-height: 1.2;
+    transition: all 0.15s;
+    position: relative;
+    user-select: none;
+  }
+  .sticker:hover {
+    border-color: var(--accent);
+    color: var(--text);
+    transform: scale(1.08);
+    z-index: 2;
+  }
+  .sticker.owned {
+    border-color: var(--green);
+    background: rgba(34,197,94,0.12);
+    color: var(--green);
+  }
+  .sticker.owned::after {
+    content: '✓';
+    position: absolute;
+    top: 2px;
+    right: 4px;
+    font-size: 0.6rem;
+    color: var(--green);
+    font-weight: 700;
+  }
+
+  /* ── GRUPO SECTION ── */
+  .group-section {
+    margin-bottom: 8px;
+  }
+  .group-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.9rem;
+    letter-spacing: 3px;
+    color: var(--accent);
+    padding: 0 20px;
+    margin: 8px 0 4px;
+    opacity: 0.7;
+  }
+
+  /* ── FWC special ── */
+  .fwc-card .sticker {
+    width: 48px;
+    height: 48px;
+    font-size: 0.58rem;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+  .btn-print {
+    padding: 7px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--accent);
+    background: rgba(245,197,24,0.08);
+    color: var(--accent);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-print:hover { background: rgba(245,197,24,0.2); }
+
+  @media (max-width: 600px) {
+    .title-block h1 { font-size: 1.6rem; }
+    .stats-bar { gap: 8px; }
+    .sticker { width: 46px; height: 46px; font-size: 0.6rem; }
+  }
+
+  /* ── PRINT OVERLAY ── */
+  #print-overlay { display: none; }
+
+  @media print {
+    body > *:not(#print-overlay) { display: none !important; }
+    #print-overlay {
+      display: block !important;
+      font-family: 'Barlow', sans-serif;
+      font-size: 10pt;
+      color: #111;
+      background: #fff;
+      padding: 0;
+    }
+    #print-overlay h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 24pt;
+      letter-spacing: 3px;
+      color: #111;
+      margin-bottom: 2px;
+    }
+    #print-overlay .pr-subtitle {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 8pt;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #666;
+      margin-bottom: 6px;
+    }
+    #print-overlay .pr-date { font-size: 8pt; color: #999; margin-bottom: 10px; }
+    #print-overlay .pr-stats {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 10px;
+      padding: 6px 10px;
+      background: #f5f5f5;
+      border-left: 4px solid #f5c518;
+    }
+    #print-overlay .pr-stat .v {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 16pt;
+      line-height: 1;
+    }
+    #print-overlay .pr-stat .l {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 7pt;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #888;
+    }
+    #print-overlay .pr-progress {
+      height: 6px;
+      background: #e5e7eb;
+      border-radius: 3px;
+      margin-bottom: 14px;
+      overflow: hidden;
+    }
+    #print-overlay .pr-progress-fill {
+      height: 100%;
+      background: #22c55e;
+      border-radius: 3px;
+    }
+    #print-overlay h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 13pt;
+      letter-spacing: 2px;
+      border-bottom: 2px solid #f5c518;
+      padding-bottom: 3px;
+      margin: 12px 0 5px;
+      color: #111;
+      page-break-after: avoid;
+    }
+    #print-overlay table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 8pt;
+    }
+    #print-overlay th {
+      font-family: 'Barlow Condensed', sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-size: 7pt;
+      background: #f5f5f5;
+      padding: 4px 6px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+    #print-overlay td {
+      padding: 3px 6px;
+      border-bottom: 1px solid #f0f0f0;
+      vertical-align: top;
+    }
+    #print-overlay .pr-country {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 8.5pt;
+      white-space: nowrap;
+      width: 150px;
+    }
+    #print-overlay .pr-count {
+      font-family: 'Barlow Condensed', sans-serif;
+      color: #555;
+      white-space: nowrap;
+      width: 44px;
+      text-align: center;
+    }
+    #print-overlay .pr-codes { color: #333; line-height: 1.5; word-break: break-word; }
+    #print-overlay .pr-nopacks { font-size: 7pt; color: #e05c1a; }
+    #print-overlay tr { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<div id="install-banner">
+  <span style="font-size:1.6rem">⚽</span>
+  <div class="ib-text">
+    <strong>Instalar como app</strong>
+    Acesse offline, direto da tela inicial
+  </div>
+  <button id="btn-install">Instalar</button>
+  <button id="btn-install-close" title="Fechar">✕</button>
+</div>
+
+<header>
+  <div class="header-inner">
+    <div class="title-block">
+      <h1>⚽ Copa 2026</h1>
+      <p>Controle de Figurinhas · Ludopédio</p>
+    </div>
+    <div class="stats-bar">
+      <div class="stat-pill green">
+        <div class="val" id="stat-tenho">0</div>
+        <div class="lbl">Tenho</div>
+      </div>
+      <div class="stat-pill red">
+        <div class="val" id="stat-faltam">0</div>
+        <div class="lbl">Faltam</div>
+      </div>
+      <div class="stat-pill">
+        <div class="val" id="stat-total">0</div>
+        <div class="lbl">Total</div>
+      </div>
+      <div class="pacotes-block">
+        <div>
+          <div class="lbl">Pacotes</div>
+          <div class="lbl" style="font-size:0.6rem;color:var(--muted)">(7 fig. cada)</div>
+        </div>
+        <button class="btn-sm minus" id="btn-minus">−</button>
+        <div class="count" id="pacotes-count">0</div>
+        <button class="btn-sm" id="btn-plus">+</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="prob-block">
+  <div class="prob-inner">
+    <div>
+      <div class="prob-label">Prob. figurinha inédita no próximo pacote</div>
+      <div class="prob-value" id="prob-value">—</div>
+    </div>
+    <div class="prob-bar-wrap">
+      <div class="prob-bar-fill" id="prob-bar" style="width:0%"></div>
+    </div>
+    <div class="prob-text" id="prob-text">Compre um pacote para ver a probabilidade.</div>
+  </div>
+</div>
+
+<div id="trocas-banner" style="display:none;background:linear-gradient(135deg,#14532d,#166534);border-top:3px solid #22c55e;border-bottom:3px solid #22c55e;padding:14px 24px;">
+  <div style="max-width:1400px;margin:0 auto;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+    <span style="font-size:2rem">🚫📦</span>
+    <div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:2px;color:#4ade80;line-height:1">Chega de comprar figurinha!</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.85rem;letter-spacing:1px;color:#86efac;margin-top:2px">Vamos às trocas! Você já comprou pacotes suficientes para completar o álbum sem repetições.</div>
+    </div>
+    <div style="margin-left:auto;font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:1px;color:#86efac;text-align:right">
+      <span id="trocas-pacotes-info"></span>
+    </div>
+  </div>
+</div>
+
+<div class="progress-section">
+  <div class="progress-label">Progresso geral do álbum</div>
+  <div class="global-progress">
+    <div class="global-progress-fill" id="global-fill" style="width:0%"></div>
+  </div>
+</div>
+
+<div class="toolbar">
+  <input class="search-box" type="text" id="search-input" placeholder="🔍 Buscar país...">
+  <button class="filter-btn active" data-filter="all">Todas</button>
+  <button class="filter-btn" data-filter="owned">Tenho</button>
+  <button class="filter-btn" data-filter="missing">Faltam</button>
+  <div class="toolbar-right">
+    <button class="btn-print" id="btn-print">🖨️ Imprimir</button>
+    <button class="btn-clear" id="btn-clear-all">Limpar tudo</button>
+  </div>
+</div>
+
+<div class="groups-container" id="groups-container"></div>
+<div id="print-overlay"></div>
+
+<script>
+// ─── DATA ───────────────────────────────────────────────────────────────────
+const groups = {
+  'FWC': { name: 'Fifa World Cup History', flag: '🏆', stickers: ['FWC1','FWC2','FWC3','FWC4','FWC5','FWC6','FWC7','FWC8','FWC9','FWC10','FWC11','FWC12','FWC13','FWC14','FWC15','FWC16','FWC17','FWC18','FWC19'], inPacks: true },
+  'A_MEX': { name: 'México', flag: '🇲🇽', group: 'A', stickers: Array.from({length:20},(_,i)=>`MEX${i+1}`), inPacks: true },
+  'A_RSA': { name: 'África do Sul', flag: '🇿🇦', group: 'A', stickers: Array.from({length:20},(_,i)=>`RSA${i+1}`), inPacks: true },
+  'A_KOR': { name: 'Coreia do Sul', flag: '🇰🇷', group: 'A', stickers: Array.from({length:20},(_,i)=>`KOR${i+1}`), inPacks: true },
+  'A_CZE': { name: 'Rep. Tcheca', flag: '🇨🇿', group: 'A', stickers: Array.from({length:20},(_,i)=>`CZE${i+1}`), inPacks: true },
+  'B_CAN': { name: 'Canadá', flag: '🇨🇦', group: 'B', stickers: Array.from({length:20},(_,i)=>`CAN${i+1}`), inPacks: true },
+  'B_BIH': { name: 'Bósnia', flag: '🇧🇦', group: 'B', stickers: Array.from({length:20},(_,i)=>`BIH${i+1}`), inPacks: true },
+  'B_QAT': { name: 'Catar', flag: '🇶🇦', group: 'B', stickers: Array.from({length:20},(_,i)=>`QAT${i+1}`), inPacks: true },
+  'B_SUI': { name: 'Suíça', flag: '🇨🇭', group: 'B', stickers: Array.from({length:20},(_,i)=>`SUI${i+1}`), inPacks: true },
+  'C_BRA': { name: 'Brasil', flag: '🇧🇷', group: 'C', stickers: Array.from({length:20},(_,i)=>`BRA${i+1}`), inPacks: true },
+  'C_MAR': { name: 'Marrocos', flag: '🇲🇦', group: 'C', stickers: Array.from({length:20},(_,i)=>`MAR${i+1}`), inPacks: true },
+  'C_HAI': { name: 'Haiti', flag: '🇭🇹', group: 'C', stickers: Array.from({length:20},(_,i)=>`HAI${i+1}`), inPacks: true },
+  'C_SCO': { name: 'Escócia', flag: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', group: 'C', stickers: Array.from({length:20},(_,i)=>`SCO${i+1}`), inPacks: true },
+  'D_USA': { name: 'Estados Unidos', flag: '🇺🇸', group: 'D', stickers: Array.from({length:20},(_,i)=>`USA${i+1}`), inPacks: true },
+  'D_PAR': { name: 'Paraguai', flag: '🇵🇾', group: 'D', stickers: Array.from({length:20},(_,i)=>`PAR${i+1}`), inPacks: true },
+  'D_AUS': { name: 'Austrália', flag: '🇦🇺', group: 'D', stickers: Array.from({length:20},(_,i)=>`AUS${i+1}`), inPacks: true },
+  'D_TUR': { name: 'Turquia', flag: '🇹🇷', group: 'D', stickers: Array.from({length:20},(_,i)=>`TUR${i+1}`), inPacks: true },
+  'E_GER': { name: 'Alemanha', flag: '🇩🇪', group: 'E', stickers: Array.from({length:20},(_,i)=>`GER${i+1}`), inPacks: true },
+  'E_CUW': { name: 'Curaçao', flag: '🇨🇼', group: 'E', stickers: Array.from({length:20},(_,i)=>`CUW${i+1}`), inPacks: true },
+  'E_CIV': { name: 'Costa do Marfim', flag: '🇨🇮', group: 'E', stickers: Array.from({length:20},(_,i)=>`CIV${i+1}`), inPacks: true },
+  'E_ECU': { name: 'Equador', flag: '🇪🇨', group: 'E', stickers: Array.from({length:20},(_,i)=>`ECU${i+1}`), inPacks: true },
+  'F_NED': { name: 'Holanda', flag: '🇳🇱', group: 'F', stickers: Array.from({length:20},(_,i)=>`NED${i+1}`), inPacks: true },
+  'F_JPN': { name: 'Japão', flag: '🇯🇵', group: 'F', stickers: Array.from({length:20},(_,i)=>`JPN${i+1}`), inPacks: true },
+  'F_SWE': { name: 'Suécia', flag: '🇸🇪', group: 'F', stickers: Array.from({length:20},(_,i)=>`SWE${i+1}`), inPacks: true },
+  'F_TUN': { name: 'Tunísia', flag: '🇹🇳', group: 'F', stickers: Array.from({length:20},(_,i)=>`TUN${i+1}`), inPacks: true },
+  'G_BEL': { name: 'Bélgica', flag: '🇧🇪', group: 'G', stickers: Array.from({length:20},(_,i)=>`BEL${i+1}`), inPacks: true },
+  'G_EGY': { name: 'Egito', flag: '🇪🇬', group: 'G', stickers: Array.from({length:20},(_,i)=>`EGY${i+1}`), inPacks: true },
+  'G_IRN': { name: 'Irã', flag: '🇮🇷', group: 'G', stickers: Array.from({length:20},(_,i)=>`IRN${i+1}`), inPacks: true },
+  'G_NZL': { name: 'Nova Zelândia', flag: '🇳🇿', group: 'G', stickers: Array.from({length:20},(_,i)=>`NZL${i+1}`), inPacks: true },
+  'H_ESP': { name: 'Espanha', flag: '🇪🇸', group: 'H', stickers: Array.from({length:20},(_,i)=>`ESP${i+1}`), inPacks: true },
+  'H_CPV': { name: 'Cabo Verde', flag: '🇨🇻', group: 'H', stickers: Array.from({length:20},(_,i)=>`CPV${i+1}`), inPacks: true },
+  'H_KSA': { name: 'Arábia Saudita', flag: '🇸🇦', group: 'H', stickers: Array.from({length:20},(_,i)=>`KSA${i+1}`), inPacks: true },
+  'H_URU': { name: 'Uruguai', flag: '🇺🇾', group: 'H', stickers: Array.from({length:20},(_,i)=>`URU${i+1}`), inPacks: true },
+  'I_FRA': { name: 'França', flag: '🇫🇷', group: 'I', stickers: Array.from({length:20},(_,i)=>`FRA${i+1}`), inPacks: true },
+  'I_SEN': { name: 'Senegal', flag: '🇸🇳', group: 'I', stickers: Array.from({length:20},(_,i)=>`SEN${i+1}`), inPacks: true },
+  'I_IRQ': { name: 'Iraque', flag: '🇮🇶', group: 'I', stickers: Array.from({length:20},(_,i)=>`IRQ${i+1}`), inPacks: true },
+  'I_NOR': { name: 'Noruega', flag: '🇳🇴', group: 'I', stickers: Array.from({length:20},(_,i)=>`NOR${i+1}`), inPacks: true },
+  'J_ARG': { name: 'Argentina', flag: '🇦🇷', group: 'J', stickers: Array.from({length:20},(_,i)=>`ARG${i+1}`), inPacks: true },
+  'J_ALG': { name: 'Argélia', flag: '🇩🇿', group: 'J', stickers: Array.from({length:20},(_,i)=>`ALG${i+1}`), inPacks: true },
+  'J_AUT': { name: 'Áustria', flag: '🇦🇹', group: 'J', stickers: Array.from({length:20},(_,i)=>`AUT${i+1}`), inPacks: true },
+  'J_JOR': { name: 'Jordânia', flag: '🇯🇴', group: 'J', stickers: Array.from({length:20},(_,i)=>`JOR${i+1}`), inPacks: true },
+  'K_POR': { name: 'Portugal', flag: '🇵🇹', group: 'K', stickers: Array.from({length:20},(_,i)=>`POR${i+1}`), inPacks: true },
+  'K_COD': { name: 'Congo', flag: '🇨🇩', group: 'K', stickers: Array.from({length:20},(_,i)=>`COD${i+1}`), inPacks: true },
+  'K_UZB': { name: 'Uzbequistão', flag: '🇺🇿', group: 'K', stickers: Array.from({length:20},(_,i)=>`UZB${i+1}`), inPacks: true },
+  'K_COL': { name: 'Colômbia', flag: '🇨🇴', group: 'K', stickers: Array.from({length:20},(_,i)=>`COL${i+1}`), inPacks: true },
+  'L_ENG': { name: 'Inglaterra', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', group: 'L', stickers: Array.from({length:20},(_,i)=>`ENG${i+1}`), inPacks: true },
+  'L_CRO': { name: 'Croácia', flag: '🇭🇷', group: 'L', stickers: Array.from({length:20},(_,i)=>`CRO${i+1}`), inPacks: true },
+  'L_GHA': { name: 'Gana', flag: '🇬🇭', group: 'L', stickers: Array.from({length:20},(_,i)=>`GHA${i+1}`), inPacks: true },
+  'L_PAN': { name: 'Panamá', flag: '🇵🇦', group: 'L', stickers: Array.from({length:20},(_,i)=>`PAN${i+1}`), inPacks: true },
+  'CC': { name: 'Coca-Cola', flag: '🥤', stickers: ['CC1','CC2','CC3','CC4','CC5','CC6','CC7','CC8','CC9','CC10','CC11','CC12','CC13','CC14'], inPacks: false },
+};
+
+// Total de figurinhas disponíveis nos pacotinhos (excluindo Coca-Cola)
+const totalInPacks = Object.values(groups).filter(g => g.inPacks).reduce((s,g) => s + g.stickers.length, 0);
+const totalAll = Object.values(groups).reduce((s,g) => s + g.stickers.length, 0);
+
+// ─── STATE ────────────────────────────────────────────────────────────────
+let owned = JSON.parse(localStorage.getItem('copa2026_owned') || '{}');
+let pacotes = parseInt(localStorage.getItem('copa2026_pacotes') || '0');
+
+function save() {
+  localStorage.setItem('copa2026_owned', JSON.stringify(owned));
+  localStorage.setItem('copa2026_pacotes', pacotes);
+}
+
+// ─── PROBABILITY ─────────────────────────────────────────────────────────
+// pUma  = missing / totalInPacks  → prob de 1 figurinha sorteada ser inédita
+// pPacote = 1 - (1 - pUma)^7     → prob de ao menos 1 inédita no pacote de 7
+function calcProb() {
+  const ownedInPacks = Object.values(groups)
+    .filter(g => g.inPacks)
+    .flatMap(g => g.stickers)
+    .filter(s => owned[s]).length;
+
+  const missing = totalInPacks - ownedInPacks;
+  const pUma = missing / totalInPacks;
+  const pPacote = 1 - Math.pow(1 - pUma, 7);
+  return { pUma, pPacote, ownedInPacks, missing };
+}
+
+function updateProbUI() {
+  const { pUma, pPacote, missing } = calcProb();
+  const el = document.getElementById('prob-value');
+  const bar = document.getElementById('prob-bar');
+  const txt = document.getElementById('prob-text');
+
+  if (missing === totalInPacks) {
+    // zero figurinhas coletadas ainda
+    el.textContent = '100%';
+    bar.style.width = '100%';
+    txt.textContent = 'Você ainda não tem nenhuma figurinha — qualquer figurinha do pacote será inédita!';
+    return;
+  }
+  if (missing === 0) {
+    el.textContent = '0%';
+    bar.style.width = '0%';
+    txt.textContent = 'Você tem todas as figurinhas disponíveis em pacotes. Álbum completo! 🏆';
+    return;
+  }
+
+  const pctUma = (pUma * 100).toFixed(1);
+
+  // Prob de o pacote inteiro ser repetido (complemento)
+  const pTodoRepetido = Math.pow(1 - pUma, 7) * 100;
+  let textoPacket;
+  if (pTodoRepetido < 0.01) {
+    textoPacket = 'quase impossível tirar pacote todo repetido';
+  } else if (pTodoRepetido < 1) {
+    textoPacket = `apenas ${pTodoRepetido.toFixed(2)}% de chance de o pacote ser todo repetido`;
+  } else {
+    const pPacote = (1 - Math.pow(1 - pUma, 7)) * 100;
+    textoPacket = `${pPacote.toFixed(1)}% de chance de ao menos 1 inédita no pacote de 7`;
+  }
+
+  el.textContent = `${pctUma}%`;
+  bar.style.width = `${pctUma}%`;
+  txt.textContent = `Chance de 1 fig. ser inédita: ${pctUma}% · ${textoPacket} · Faltam ${missing} de ${totalInPacks} (em pacotes).`;
+}
+
+// ─── STATS UI ─────────────────────────────────────────────────────────────
+// Mínimo teórico de pacotes para completar o álbum (sem repetições)
+const pacotesMinimos = Math.ceil(totalInPacks / 7);
+
+function updateStats() {
+  const total = Object.keys(owned).filter(k => owned[k]).length;
+  const faltam = totalAll - total;
+  document.getElementById('stat-tenho').textContent = total;
+  document.getElementById('stat-faltam').textContent = faltam;
+  document.getElementById('stat-total').textContent = totalAll;
+  document.getElementById('pacotes-count').textContent = pacotes;
+  const pct = total / totalAll * 100;
+  document.getElementById('global-fill').style.width = `${pct}%`;
+
+  // Banner de trocas
+  const banner = document.getElementById('trocas-banner');
+  if (pacotes >= pacotesMinimos) {
+    banner.style.display = '';
+    document.getElementById('trocas-pacotes-info').textContent =
+      `${pacotes} pacotes comprados · mín. teórico: ${pacotesMinimos}`;
+  } else {
+    banner.style.display = 'none';
+  }
+
+  updateProbUI();
+}
+
+// ─── TOGGLE STICKER ───────────────────────────────────────────────────────
+function toggleSticker(code) {
+  owned[code] = !owned[code];
+  save();
+  const el = document.querySelector(`[data-sticker="${code}"]`);
+  if (el) el.classList.toggle('owned', owned[code]);
+  updateCountryCard(code);
+  updateStats();
+  applyFilter(currentFilter);
+}
+
+function updateCountryCard(code) {
+  // find which group
+  for (const [key, g] of Object.entries(groups)) {
+    if (g.stickers.includes(code)) {
+      const card = document.querySelector(`[data-group="${key}"]`);
+      if (!card) return;
+      const cnt = g.stickers.filter(s => owned[s]).length;
+      const tot = g.stickers.length;
+      card.querySelector('.country-count').innerHTML = `<span>${cnt}</span>/${tot}`;
+      card.querySelector('.country-mini-fill').style.width = `${cnt/tot*100}%`;
+      const badge = card.querySelector('.complete-badge');
+      if (cnt === tot) {
+        card.classList.add('complete');
+        if (badge) badge.style.display = '';
+      } else {
+        card.classList.remove('complete');
+        if (badge) badge.style.display = 'none';
+      }
+      return;
+    }
+  }
+}
+
+// ─── BUILD UI ─────────────────────────────────────────────────────────────
+let currentFilter = 'all';
+
+function buildGroups() {
+  const container = document.getElementById('groups-container');
+  container.innerHTML = '';
+
+  // Group by letter
+  const byGroup = {};
+  for (const [key, g] of Object.entries(groups)) {
+    const grp = g.group || 'FWC';
+    if (!byGroup[grp]) byGroup[grp] = [];
+    byGroup[grp].push([key, g]);
+  }
+
+  for (const [grpLabel, entries] of Object.entries(byGroup)) {
+    const section = document.createElement('div');
+    section.className = 'group-section';
+    if (grpLabel !== 'FWC') {
+      const title = document.createElement('div');
+      title.className = 'group-title';
+      title.textContent = `Grupo ${grpLabel}`;
+      section.appendChild(title);
+    }
+
+    for (const [key, g] of entries) {
+      const cnt = g.stickers.filter(s => owned[s]).length;
+      const tot = g.stickers.length;
+
+      const card = document.createElement('div');
+      card.className = `country-card${cnt===tot?' complete':''}`;
+      card.dataset.group = key;
+      card.dataset.name = g.name.toLowerCase();
+
+      card.innerHTML = `
+        <div class="country-header" onclick="toggleExpand('${key}')">
+          <span class="country-flag">${g.flag}</span>
+          <span class="country-name">${g.name}</span>
+          ${g.inPacks===false ? '<span style="font-size:0.65rem;color:var(--accent2);font-family:Barlow Condensed,sans-serif;letter-spacing:1px;text-transform:uppercase">Não vendida em pacotes</span>' : ''}
+          <div class="country-mini-progress">
+            <div class="country-mini-fill" style="width:${cnt/tot*100}%"></div>
+          </div>
+          <span class="country-count"><span>${cnt}</span>/${tot}</span>
+          <span class="complete-badge" style="${cnt===tot?'':'display:none'}">✓ Completa</span>
+        </div>
+        <div class="stickers-grid" id="grid-${key}">
+          ${g.stickers.map(s => `
+            <div class="sticker${owned[s]?' owned':''}" data-sticker="${s}" onclick="toggleSticker('${s}')" title="${s}">
+              ${s}
+            </div>
+          `).join('')}
+        </div>
+      `;
+      section.appendChild(card);
+    }
+    container.appendChild(section);
+  }
+}
+
+function toggleExpand(key) {
+  const grid = document.getElementById(`grid-${key}`);
+  if (grid) {
+    grid.style.display = grid.style.display === 'none' ? 'flex' : 'none';
+  }
+}
+
+// ─── FILTER ───────────────────────────────────────────────────────────────
+function applyFilter(filter) {
+  currentFilter = filter;
+  for (const [key, g] of Object.entries(groups)) {
+    const card = document.querySelector(`[data-group="${key}"]`);
+    if (!card) continue;
+    const grid = document.getElementById(`grid-${key}`);
+    const stickers = grid.querySelectorAll('.sticker');
+
+    if (filter === 'all') {
+      card.style.display = '';
+      stickers.forEach(s => s.style.display = '');
+    } else if (filter === 'owned') {
+      const hasOwned = g.stickers.some(s => owned[s]);
+      card.style.display = hasOwned ? '' : 'none';
+      stickers.forEach(s => {
+        s.style.display = s.classList.contains('owned') ? '' : 'none';
+      });
+      if (grid.style.display === 'none') grid.style.display = 'flex';
+    } else if (filter === 'missing') {
+      const hasMissing = g.stickers.some(s => !owned[s]);
+      card.style.display = hasMissing ? '' : 'none';
+      stickers.forEach(s => {
+        s.style.display = s.classList.contains('owned') ? 'none' : '';
+      });
+      if (grid.style.display === 'none') grid.style.display = 'flex';
+    }
+  }
+}
+
+// ─── SEARCH ───────────────────────────────────────────────────────────────
+function applySearch(query) {
+  const q = query.toLowerCase().trim();
+  for (const [key, g] of Object.entries(groups)) {
+    const card = document.querySelector(`[data-group="${key}"]`);
+    if (!card) continue;
+    if (!q) { card.style.display = ''; continue; }
+    const match = g.name.toLowerCase().includes(q) || key.toLowerCase().includes(q);
+    card.style.display = match ? '' : 'none';
+  }
+}
+
+// ─── EVENTS ───────────────────────────────────────────────────────────────
+document.getElementById('btn-plus').addEventListener('click', () => {
+  pacotes++;
+  save();
+  updateStats();
+});
+document.getElementById('btn-minus').addEventListener('click', () => {
+  if (pacotes > 0) { pacotes--; save(); updateStats(); }
+});
+
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    applyFilter(btn.dataset.filter);
+  });
+});
+
+document.getElementById('search-input').addEventListener('input', (e) => {
+  applySearch(e.target.value);
+});
+
+document.getElementById('btn-clear-all').addEventListener('click', () => {
+  // confirm() é bloqueado em iframes — usar modal próprio
+  showClearModal();
+});
+
+function showClearModal() {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML = `
+    <div style="background:#1a2235;border:1px solid #2a3550;border-top:3px solid #e05c1a;border-radius:12px;padding:28px 32px;max-width:360px;text-align:center;font-family:Barlow,sans-serif">
+      <div style="font-family:Bebas Neue,sans-serif;font-size:1.4rem;color:#f5c518;letter-spacing:2px;margin-bottom:10px">LIMPAR TUDO?</div>
+      <div style="color:#7a8aaa;font-size:0.9rem;margin-bottom:22px">Isso vai apagar todas as suas marcações. Essa ação não pode ser desfeita.</div>
+      <div style="display:flex;gap:12px;justify-content:center">
+        <button id="modal-cancel" style="padding:9px 22px;border-radius:8px;border:1px solid #2a3550;background:#111827;color:#e8eaf2;font-family:Barlow Condensed,sans-serif;letter-spacing:1px;text-transform:uppercase;cursor:pointer;font-size:0.85rem">Cancelar</button>
+        <button id="modal-confirm" style="padding:9px 22px;border-radius:8px;border:none;background:#e05c1a;color:#fff;font-family:Barlow Condensed,sans-serif;letter-spacing:1px;text-transform:uppercase;cursor:pointer;font-size:0.85rem;font-weight:700">Sim, limpar</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  document.getElementById('modal-cancel').onclick = () => overlay.remove();
+  document.getElementById('modal-confirm').onclick = () => {
+    owned = {};
+    save();
+    buildGroups();
+    updateStats();
+    applyFilter(currentFilter);
+    overlay.remove();
+  };
+}
+
+// ─── PRINT ───────────────────────────────────────────────────────────────
+document.getElementById('btn-print').addEventListener('click', () => {
+  const tenho = parseInt(document.getElementById('stat-tenho').textContent);
+  const faltam = parseInt(document.getElementById('stat-faltam').textContent);
+  const total = parseInt(document.getElementById('stat-total').textContent);
+  const pct = total > 0 ? ((tenho / total) * 100).toFixed(1) : 0;
+  const now = new Date().toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric'});
+
+  let missingRows = '';
+  for (const [key, g] of Object.entries(groups)) {
+    const miss = g.stickers.filter(s => !owned[s]);
+    if (miss.length === 0) continue;
+    missingRows += `<tr>
+      <td class="pr-country">${g.flag} ${g.name}${!g.inPacks ? ' <em style="font-size:7pt;color:#e05c1a">(não em pacotes)</em>' : ''}</td>
+      <td class="pr-count">${g.stickers.length - miss.length}/${g.stickers.length}</td>
+      <td class="pr-codes">${miss.join(', ')}</td></tr>`;
+  }
+
+  let ownedRows = '';
+  for (const [key, g] of Object.entries(groups)) {
+    const have = g.stickers.filter(s => owned[s]);
+    if (have.length === 0) continue;
+    ownedRows += `<tr>
+      <td class="pr-country">${g.flag} ${g.name}</td>
+      <td class="pr-count">${have.length}/${g.stickers.length}</td>
+      <td class="pr-codes">${have.join(', ')}</td></tr>`;
+  }
+
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Copa 2026 - Figurinhas</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;font-size:9pt;color:#111;padding:12mm 10mm;background:#fff}
+h1{font-size:20pt;font-weight:900;letter-spacing:2px;margin-bottom:2px}
+.sub{font-size:8pt;letter-spacing:2px;text-transform:uppercase;color:#666;margin-bottom:5px}
+.dt{font-size:7.5pt;color:#999;margin-bottom:10px}
+.stats{display:flex;gap:18px;margin-bottom:10px;padding:6px 10px;background:#f5f5f5;border-left:4px solid #f5c518}
+.stat .v{font-size:16pt;font-weight:900;line-height:1}
+.stat .l{font-size:7pt;text-transform:uppercase;letter-spacing:1px;color:#888}
+.bar{height:6px;background:#e5e7eb;border-radius:3px;margin-bottom:12px;overflow:hidden}
+.bar-fill{height:100%;background:#22c55e;border-radius:3px}
+h2{font-size:11pt;font-weight:900;letter-spacing:1px;border-bottom:2px solid #f5c518;padding-bottom:2px;margin:10px 0 4px}
+table{width:100%;border-collapse:collapse;font-size:8pt}
+th{text-transform:uppercase;letter-spacing:1px;font-size:7pt;background:#f5f5f5;padding:3px 6px;text-align:left;border-bottom:1px solid #ddd}
+td{padding:3px 6px;border-bottom:1px solid #f0f0f0;vertical-align:top}
+.c1{font-weight:700;white-space:nowrap;width:155px}
+.c2{color:#555;white-space:nowrap;width:42px;text-align:center}
+.c3{color:#333;line-height:1.5;word-break:break-word}
+tr{page-break-inside:avoid}
+</style>
+</head>
+<body>
+<h1>⚽ Copa 2026</h1>
+<div class="sub">Controle de Figurinhas · Ludopédio</div>
+<div class="dt">Gerado em ${now}</div>
+<div class="stats">
+  <div class="stat"><div class="v">${tenho}</div><div class="l">Tenho</div></div>
+  <div class="stat"><div class="v">${faltam}</div><div class="l">Faltam</div></div>
+  <div class="stat"><div class="v">${total}</div><div class="l">Total</div></div>
+  <div class="stat"><div class="v">${pct}%</div><div class="l">Completo</div></div>
+</div>
+<div class="bar"><div class="bar-fill" style="width:${pct}%"></div></div>
+<h2>Figurinhas que Faltam</h2>
+${missingRows ? `<table><thead><tr><th>País</th><th>Tenho</th><th>Faltando</th></tr></thead><tbody>${missingRows}</tbody></table>` : '<p style="color:#22c55e;font-weight:bold;padding:5px 0">Álbum completo! 🏆</p>'}
+<h2>Figurinhas que Tenho</h2>
+${ownedRows ? `<table><thead><tr><th>País</th><th>Qtd</th><th>Coletadas</th></tr></thead><tbody>${ownedRows}</tbody></table>` : '<p style="color:#888;padding:5px 0">Nenhuma figurinha marcada ainda.</p>'}
+</body></html>`;
+
+  // Gera download de arquivo HTML — funciona dentro de iframe sem pop-up
+  const blob = new Blob([html], {type: 'text/html;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `copa2026-figurinhas-${now.replace(/\//g,'-')}.html`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
+// ─── INSTALL PWA ─────────────────────────────────────────────────────────
+let deferredPrompt = null;
+const installBanner = document.getElementById('install-banner');
+const btnInstall = document.getElementById('btn-install');
+const btnInstallClose = document.getElementById('btn-install-close');
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  installBanner.classList.add('visible');
+});
+
+btnInstall.addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  installBanner.classList.remove('visible');
+});
+
+btnInstallClose.addEventListener('click', () => {
+  installBanner.classList.remove('visible');
+});
+
+window.addEventListener('appinstalled', () => {
+  installBanner.classList.remove('visible');
+  deferredPrompt = null;
+});
+
+// ─── INIT ─────────────────────────────────────────────────────────────────
+buildGroups();
+updateStats();
+</script>
+</body>
+</html>
