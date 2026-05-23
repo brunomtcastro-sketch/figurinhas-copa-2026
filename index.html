@@ -705,6 +705,10 @@ self.addEventListener('fetch', e => {
         <div class="val" id="stat-total">0</div>
         <div class="lbl">Total</div>
       </div>
+      <div style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;">
+        <span style="font-size:0.7rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted)">Nuvem</span>
+        <span id="sync-status" style="font-size:0.75rem;color:#4ade80;transition:opacity 0.5s;opacity:0.4">✓ Sincronizado</span>
+      </div>
       <div class="pacotes-block">
         <div>
           <div class="lbl">Pacotes</div>
@@ -824,13 +828,86 @@ const groups = {
 const totalInPacks = Object.values(groups).filter(g => g.inPacks).reduce((s,g) => s + g.stickers.length, 0);
 const totalAll = Object.values(groups).reduce((s,g) => s + g.stickers.length, 0);
 
+// ─── SUPABASE ─────────────────────────────────────────────────────────────
+const SUPA_URL = 'https://nqofgpubfmbfahcheihb.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5xb2ZncHViZm1iZmFoY2hlaWhiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyODIyMzksImV4cCI6MjA5NDg1ODIzOX0.l1fd847-f9e2BUa2c9JOKZO2hc0qfF2KiBamJAnIi_Q';
+
+async function supaFetch(method, body = null) {
+  const opts = {
+    method,
+    headers: {
+      'apikey': SUPA_KEY,
+      'Authorization': 'Bearer ' + SUPA_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': method === 'POST' ? 'resolution=merge-duplicates' : ''
+    }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(`${SUPA_URL}/rest/v1/figurinhas`, opts);
+  if (method === 'GET') return res.json();
+  return res.ok;
+}
+
 // ─── STATE ────────────────────────────────────────────────────────────────
 let owned = JSON.parse(localStorage.getItem('copa2026_owned') || '{}');
 let pacotes = parseInt(localStorage.getItem('copa2026_pacotes') || '0');
+let syncTimeout = null;
 
 function save() {
+  // Salvar localmente imediatamente (para não travar a UI)
   localStorage.setItem('copa2026_owned', JSON.stringify(owned));
   localStorage.setItem('copa2026_pacotes', pacotes);
+  // Sincronizar com Supabase com debounce de 800ms
+  clearTimeout(syncTimeout);
+  syncTimeout = setTimeout(syncToSupabase, 800);
+}
+
+async function syncToSupabase() {
+  try {
+    const rows = Object.entries(owned).map(([id, o]) => ({ id, owned: o }));
+    // Salvar pacotes como registro especial
+    // Encode pacotes count in a special id since table only has id+owned
+    rows.push({ id: `__pacotes_${pacotes}__`, owned: false });
+    await supaFetch('POST', rows);
+    showSyncStatus('✓ Sincronizado');
+  } catch(e) {
+    showSyncStatus('⚠ Offline');
+  }
+}
+
+async function loadFromSupabase() {
+  try {
+    showSyncStatus('⟳ Carregando...');
+    const data = await supaFetch('GET');
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      showSyncStatus('✓ Pronto');
+      return;
+    }
+    owned = {};
+    for (const row of data) {
+      if (row.id && row.id.startsWith('__pacotes_')) {
+        const m = row.id.match(/^__pacotes_(\d+)__$/);
+        if (m) pacotes = parseInt(m[1]);
+      } else {
+        owned[row.id] = row.owned;
+      }
+    }
+    localStorage.setItem('copa2026_owned', JSON.stringify(owned));
+    localStorage.setItem('copa2026_pacotes', pacotes);
+    showSyncStatus('✓ Sincronizado');
+  } catch(e) {
+    showSyncStatus('⚠ Offline — dados locais');
+  }
+}
+
+function showSyncStatus(msg) {
+  let el = document.getElementById('sync-status');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.opacity = '1';
+  if (msg.startsWith('✓')) {
+    setTimeout(() => { el.style.opacity = '0.4'; }, 2000);
+  }
 }
 
 // ─── PROBABILITY ─────────────────────────────────────────────────────────
@@ -917,7 +994,7 @@ function updateStats() {
 // ─── TOGGLE STICKER ───────────────────────────────────────────────────────
 function toggleSticker(code) {
   owned[code] = !owned[code];
-  save();
+  save(); // salva local + agenda sync
   const el = document.querySelector(`[data-sticker="${code}"]`);
   if (el) el.classList.toggle('owned', owned[code]);
   updateCountryCard(code);
@@ -1228,6 +1305,13 @@ window.addEventListener('appinstalled', () => {
 // ─── INIT ─────────────────────────────────────────────────────────────────
 buildGroups();
 updateStats();
+
+// Carregar dados do Supabase e atualizar UI
+loadFromSupabase().then(() => {
+  buildGroups();
+  updateStats();
+  applyFilter(currentFilter);
+});
 </script>
 </body>
 </html>
