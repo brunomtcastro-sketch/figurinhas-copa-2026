@@ -849,15 +849,18 @@ async function supaFetch(method, body = null) {
 }
 
 // ─── STATE ────────────────────────────────────────────────────────────────
-let owned = JSON.parse(localStorage.getItem('copa2026_owned') || '{}');
-let pacotes = parseInt(localStorage.getItem('copa2026_pacotes') || '0');
+// Supabase é a fonte de verdade. localStorage é só cache offline.
+let owned = {};
+let pacotes = 0;
 let syncTimeout = null;
+let supabaseLoaded = false; // flag: só salva no Supabase após o load inicial
 
 function save() {
-  // Salvar localmente imediatamente (para não travar a UI)
+  // Sempre salvar localmente (cache offline)
   localStorage.setItem('copa2026_owned', JSON.stringify(owned));
   localStorage.setItem('copa2026_pacotes', pacotes);
-  // Sincronizar com Supabase com debounce de 800ms
+  // Só sincronizar com Supabase após o load inicial terminar
+  if (!supabaseLoaded) return;
   clearTimeout(syncTimeout);
   syncTimeout = setTimeout(syncToSupabase, 800);
 }
@@ -878,44 +881,40 @@ async function syncToSupabase() {
 async function loadFromSupabase() {
   try {
     showSyncStatus('⟳ Carregando...');
-    // Guardar marcações feitas localmente ANTES do load terminar
-    const pendingOwned = { ...owned };
-    const pendingPacotes = pacotes;
-
     const data = await supaFetch('GET');
+
     if (!data || !Array.isArray(data) || data.length === 0) {
+      // Supabase vazio: usar cache local se existir
+      const localOwned = localStorage.getItem('copa2026_owned');
+      if (localOwned) owned = JSON.parse(localOwned);
+      pacotes = parseInt(localStorage.getItem('copa2026_pacotes') || '0');
       showSyncStatus('✓ Pronto');
+      supabaseLoaded = true;
       return;
     }
 
-    // Aplicar dados do Supabase como base
-    const remoteOwned = {};
-    let remotePacotes = pendingPacotes;
+    // Supabase é a fonte de verdade — substituir tudo
+    owned = {};
     for (const row of data) {
       if (row.id && row.id.startsWith('__pacotes_')) {
         const m = row.id.match(/^__pacotes_(\d+)__$/);
-        if (m) remotePacotes = parseInt(m[1]);
+        if (m) pacotes = parseInt(m[1]);
       } else {
-        remoteOwned[row.id] = row.owned;
+        owned[row.id] = row.owned;
       }
     }
 
-    // Mesclar: se o usuário marcou algo durante o carregamento, preservar
-    owned = { ...remoteOwned };
-    for (const [id, val] of Object.entries(pendingOwned)) {
-      // Se o valor local difere do que estava no localStorage original,
-      // significa que o usuário interagiu — preservar a mudança local
-      const originalLocal = JSON.parse(localStorage.getItem('copa2026_owned') || '{}');
-      if (originalLocal[id] !== val) {
-        owned[id] = val; // mudança local vence
-      }
-    }
-    pacotes = remotePacotes;
-
+    // Atualizar cache local
     localStorage.setItem('copa2026_owned', JSON.stringify(owned));
     localStorage.setItem('copa2026_pacotes', pacotes);
+    supabaseLoaded = true;
     showSyncStatus('✓ Sincronizado');
   } catch(e) {
+    // Offline: carregar do cache local
+    const localOwned = localStorage.getItem('copa2026_owned');
+    if (localOwned) owned = JSON.parse(localOwned);
+    pacotes = parseInt(localStorage.getItem('copa2026_pacotes') || '0');
+    supabaseLoaded = true; // permitir saves offline
     showSyncStatus('⚠ Offline — dados locais');
   }
 }
@@ -1323,10 +1322,11 @@ window.addEventListener('appinstalled', () => {
 });
 
 // ─── INIT ─────────────────────────────────────────────────────────────────
+// Renderizar estrutura vazia primeiro (grupos sem marcações)
 buildGroups();
 updateStats();
 
-// Carregar dados do Supabase e atualizar UI
+// Carregar do Supabase e re-renderizar com dados reais
 loadFromSupabase().then(() => {
   buildGroups();
   updateStats();
