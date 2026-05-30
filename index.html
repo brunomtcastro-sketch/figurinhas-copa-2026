@@ -879,6 +879,8 @@ async function syncToSupabase() {
 }
 
 async function loadFromSupabase() {
+  // Desabilitar interações até carregar
+  setUIEnabled(false);
   try {
     showSyncStatus('⟳ Carregando...');
     const data = await supaFetch('GET');
@@ -914,9 +916,26 @@ async function loadFromSupabase() {
     const localOwned = localStorage.getItem('copa2026_owned');
     if (localOwned) owned = JSON.parse(localOwned);
     pacotes = parseInt(localStorage.getItem('copa2026_pacotes') || '0');
-    supabaseLoaded = true; // permitir saves offline
+    supabaseLoaded = true;
     showSyncStatus('⚠ Offline — dados locais');
+  } finally {
+    setUIEnabled(true);
   }
+}
+
+function setUIEnabled(enabled) {
+  // Botões de pacotes
+  const btnPlus  = document.getElementById('btn-plus');
+  const btnMinus = document.getElementById('btn-minus');
+  if (btnPlus)  btnPlus.disabled  = !enabled;
+  if (btnMinus) btnMinus.disabled = !enabled;
+  // Figurinhas: cursor e pointer-events
+  document.querySelectorAll('.sticker').forEach(s => {
+    s.style.pointerEvents = enabled ? '' : 'none';
+    s.style.opacity = enabled ? '' : '0.5';
+  });
+  // Indicador visual no status
+  if (!enabled) showSyncStatus('⟳ Carregando...');
 }
 
 function showSyncStatus(msg) {
