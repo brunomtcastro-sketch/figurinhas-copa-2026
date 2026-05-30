@@ -878,20 +878,40 @@ async function syncToSupabase() {
 async function loadFromSupabase() {
   try {
     showSyncStatus('⟳ Carregando...');
+    // Guardar marcações feitas localmente ANTES do load terminar
+    const pendingOwned = { ...owned };
+    const pendingPacotes = pacotes;
+
     const data = await supaFetch('GET');
     if (!data || !Array.isArray(data) || data.length === 0) {
       showSyncStatus('✓ Pronto');
       return;
     }
-    owned = {};
+
+    // Aplicar dados do Supabase como base
+    const remoteOwned = {};
+    let remotePacotes = pendingPacotes;
     for (const row of data) {
       if (row.id && row.id.startsWith('__pacotes_')) {
         const m = row.id.match(/^__pacotes_(\d+)__$/);
-        if (m) pacotes = parseInt(m[1]);
+        if (m) remotePacotes = parseInt(m[1]);
       } else {
-        owned[row.id] = row.owned;
+        remoteOwned[row.id] = row.owned;
       }
     }
+
+    // Mesclar: se o usuário marcou algo durante o carregamento, preservar
+    owned = { ...remoteOwned };
+    for (const [id, val] of Object.entries(pendingOwned)) {
+      // Se o valor local difere do que estava no localStorage original,
+      // significa que o usuário interagiu — preservar a mudança local
+      const originalLocal = JSON.parse(localStorage.getItem('copa2026_owned') || '{}');
+      if (originalLocal[id] !== val) {
+        owned[id] = val; // mudança local vence
+      }
+    }
+    pacotes = remotePacotes;
+
     localStorage.setItem('copa2026_owned', JSON.stringify(owned));
     localStorage.setItem('copa2026_pacotes', pacotes);
     showSyncStatus('✓ Sincronizado');
